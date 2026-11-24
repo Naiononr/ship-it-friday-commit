@@ -5,7 +5,8 @@ Pure stdlib, deterministic: no network, no input files, no clock, no
 randomness. The output file is written atomically (temp file inside the
 output dir, rename with copy+unlink fallback for EXDEV) and chmodded to
 0o644 explicitly, then re-read and self-validated against the gate:
-exactly one non-blank UTF-8 line, 1-159 characters, mode 0644.
+exactly one non-blank UTF-8 line, 1-159 characters, mode 0644, and the
+raw bytes match the expected entry content exactly.
 """
 
 import os
@@ -52,6 +53,12 @@ def main():
         text = raw.decode("utf-8")
     except UnicodeDecodeError as exc:
         fail(f"output is not valid UTF-8: {exc}")
+
+    # Exact-content self-check: the bytes on disk must be exactly the
+    # entry plus a trailing newline — catches any partial or corrupted
+    # write that the shape checks below would miss.
+    if raw != data:
+        fail("output bytes do not exactly match the expected entry content")
 
     lines = text.splitlines()
     if len(lines) != 1:
